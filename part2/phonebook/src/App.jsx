@@ -1,12 +1,12 @@
 import { useState } from 'react'
-import axios from 'axios'
 import { useEffect } from 'react'
 import personService from './services/persons'
+import Notification from './components/Notification'
 
 const Filter = (props) => {
   return (
     <>
-      Filter: <input value={props.searchterm} onChange={props.handlesearchterm} />
+      filter shown with <input value={props.searchterm} onChange={props.handlesearchterm} />
     </>
   )
 }
@@ -14,9 +14,12 @@ const Filter = (props) => {
 const PersonForm = (props) => {
   return (
     <>
+      <h2>Add a new</h2>
       <form onSubmit={props.addperson}>
         <div>
           name: <input value={props.newname} onChange={props.handlenamechange} />
+        </div>
+        <div>
           number: <input value={props.newnumber} onChange={props.handlenumberchange} />
         </div>
         <div>
@@ -48,6 +51,8 @@ const App = () => {
   const [newName, setNewName] = useState('')
   const [newNumber, setNewNumber] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
+  const [notificationMessage, setNotificationMessage] = useState(null)
+  const [notificationType, setNotificationType] = useState(null)
 
   useEffect(() => {
     personService
@@ -66,6 +71,7 @@ const App = () => {
 
     const existingPerson = persons.find(person => person.name === newName)
     if (existingPerson) {
+        console.log('UPDATING')
       const confirmed = window.confirm(`${existingPerson.name} is already added the phonebook, replace the old number with a new one`)
       if (!confirmed) {
         return
@@ -86,14 +92,34 @@ const App = () => {
         setPersons(updatedPersons)
         setNewName('')
         setNewNumber('')
+        setNotificationMessage(`${existingPerson.name}'s number has been updated`)
+        setNotificationType('success')
+        setTimeout(() => {
+          setNotificationMessage(null)
+        }, 5000)
+      }).catch(() => {
+        setNotificationMessage(`Information of ${existingPerson.name} has already been removed from server`)
+        setNotificationType('error')
+        setTimeout(() => {
+          setNotificationMessage(null)
+        }, 5000)
+        setPersons(
+          persons.filter(person => person.id !== existingPerson.id)
+        )
       })
       return
     }
+    console.log('CREATING')
 
     personService.create(personObject).then(returnedPerson => {
       setPersons([...persons, returnedPerson])
       setNewName('')
       setNewNumber('')
+      setNotificationMessage(`Added ${returnedPerson.name}`)
+      setNotificationType('success')
+      setTimeout(() => {
+        setNotificationMessage(null)
+      }, 5000)
 
     })
   }
@@ -124,8 +150,8 @@ const App = () => {
 
   return (
     <div>
-      <h2>Phonebook</h2>
-      {/* Filter: <input value={searchTerm} onChange={handleSearchTerm} /> */}
+      <h2 >Phonebook</h2>
+      <Notification message={notificationMessage} type={notificationType} />
       <Filter searchterm={searchTerm}
         handlesearchterm={handleSearchTerm} />
       <PersonForm addperson={addPerson}
