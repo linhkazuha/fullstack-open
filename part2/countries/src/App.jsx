@@ -1,122 +1,108 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useState, useEffect } from 'react'
+import axios from 'axios'
+
+const api_key = import.meta.env.VITE_WEATHER_API_KEY
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [searchCountry, setSearchCountry] = useState('')
+  const [countries, setCountries] = useState([])
+  const [selectedCountry, setSelectedCountry] = useState(null)
+  const [coordinates, setCoordinates] = useState(null)
+  const [weather, setWeather] = useState(null)
+
+  const filteredCountries = searchCountry === ""
+    ? []
+    : countries.filter(country => country.name.common.toLowerCase().includes(searchCountry.toLowerCase()))
+
+  const countryToShow = selectedCountry ? selectedCountry
+      : selectedCountry === null && filteredCountries.length === 1
+        ? filteredCountries[0] : null
+
+  useEffect(() => {
+    axios
+      .get(`https://studies.cs.helsinki.fi/restcountries/api/all`)
+      .then(response => {
+        console.log('countries:', response.data)
+        setCountries(response.data)
+      })
+  }, [])
+
+
+
+  useEffect(() => {
+    if (countryToShow) {
+      setWeather(null)
+      axios
+        .get(`https://api.openweathermap.org/geo/1.0/direct?q=${countryToShow.capital[0]}&limit=1&appid=${api_key}`)
+        .then(response => {
+          // console.log('geocoding:', response.data)
+          setCoordinates(response.data[0])
+        })
+    }
+  }, [countryToShow])
+
+  useEffect(() => {
+    if (coordinates) {
+      axios
+        .get(`https://api.openweathermap.org/data/2.5/weather?lat=${coordinates.lat}&lon=${coordinates.lon}&appid=${api_key}&units=metric`)
+        .then(response => {
+          setWeather(response.data)
+        })
+    }
+  }, [coordinates])
+
+  const Country = ({ country, weather }) => {
+    return (
+      <>
+        <h1>{country.name.common}</h1>
+        <div>Capital {country.capital}</div>
+        <div>Area {country.area}</div>
+        <h2>Languages</h2>
+        <div>{Object.values(country.languages).map(language => (
+          <div key={language}>- {language}</div>
+        ))}</div>
+        <img src={country.flags.png} />
+
+        <h2>Weather in {country.capital[0]}</h2>
+        
+        <div>Temperature: {weather && weather.main.temp} Celsius</div>
+        <div>Description: {weather && weather.weather[0].description}</div>
+        {weather && (
+          <img src={`https://openweathermap.org/img/wn/${weather.weather[0].icon}@2x.png`} />
+        )}
+        {weather && (
+          <div>Wind {weather.wind.speed} m/s</div>
+        )}
+      </>
+    )
+  }
+
 
   return (
     <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+      find countries <input
+        value={searchCountry}
+        onChange={(event) => {
+          setSearchCountry(event.target.value)
+          setSelectedCountry(null)
+        }}
+      />
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
+      {filteredCountries.length > 10
+        ? <div>Too many matches, specify another filter</div>
+        : filteredCountries.length === 1
+          ? <div>
+            <Country weather={weather} country={filteredCountries[0]} />
+          </div>
+          : selectedCountry ? <Country weather={weather} country={selectedCountry}></Country>
+            : filteredCountries.map(country => (
+              <div key={country.cca3}>
+                {country.name.common}
+                <button onClick={() => setSelectedCountry(country)}>Show</button>
+              </div>
+            ))
+      }
     </>
   )
 }
-
 export default App
