@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
 
+// VITE_WEATHER_API_KEY=556c24b458025ef9b4688c16d884e769
+
 const api_key = import.meta.env.VITE_WEATHER_API_KEY
 
 function App() {
